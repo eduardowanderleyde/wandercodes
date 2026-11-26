@@ -1,22 +1,25 @@
-# Post do LinkedIn: lançamento do wandercodes
+# Post do LinkedIn: pequenos negócios e autônomos precisam de site
 
 Anexar: `video/wandercodes-tour-16x9.mp4` (ou o 9x16 se for postar pelo celular).
 
 ---
 
-Lancei o wandercodes 🚀
+Pequeno negócio e autônomo também precisam de site. 🌐
 
-Nas últimas semanas fiz três sites para negócios do Recife, cada um com uma necessidade diferente:
+Muita gente acha que o Instagram resolve. Mas quando alguém procura você no Google, ou recebe seu nome por indicação, o que encontra? Um perfil com o contato perdido entre posts e stories.
 
-🎶 Toca do Cuco, banda de cumbia e carimbó: abertura que se move com a rolagem, galeria de shows e pedido de show direto no WhatsApp.
-🎟️ Casa Bacurau, espaço cultural em Santo Amaro: agenda com venda de ingressos, lojinha com carrinho e painel de administração.
-🩺 Dra. Niedja Wanderley, pediatra: site leve, com CRM e RQE à vista, galeria do consultório e agendamento pelo WhatsApp.
+Um site simples resolve o básico:
+📍 onde você está e quando atende
+💬 um botão que abre o seu WhatsApp com a mensagem pronta
+✅ quem você é, o que faz e o seu trabalho, tudo num endereço seu
 
-Juntei tudo numa vitrine, com o tour em vídeo de cada projeto:
+Não precisa ser grande nem caro. Precisa ser fácil de achar e fácil de chamar.
+
+Foi isso que fiz para três negócios do Recife: uma banda, um espaço cultural e um consultório de pediatria. Cada site com a cara do cliente e o contato a um toque.
+
+Veja os projetos e o tour em vídeo de cada um:
 👉 https://wandercodes.duckdns.org
 
-Por trás: HTML, CSS e JavaScript puros, sem framework, imagens em WebP, hospedagem própria numa VPS com Caddy e HTTPS automático, e um script que grava o vídeo-tour de cada site direto do navegador.
+Se você é autônomo ou tem um pequeno negócio, ou conhece alguém assim, me chama. 🙌
 
-Se você conhece alguém com um negócio que ainda depende só do Instagram, me indica. 🙌
-
-#webdevelopment #desenvolvimentoweb #frontend #recife #portfolio
+#pequenosnegocios #autonomos #empreendedorismo #sites #recife
