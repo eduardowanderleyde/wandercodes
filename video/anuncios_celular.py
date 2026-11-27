@@ -1,6 +1,7 @@
-# Anúncio "Benefício" 9:16: gancho da IA + sites rolando dentro de um celular.
-# Uso: python3 -I video/beneficio_celular.py  -> video/anuncio-beneficio.mp4
-# Precisa dos quadros em fonte/celular/{bacurau,toca}/q_0001.jpg... (video/gravar_celular.mjs)
+# Anúncios 9:16 com os sites rolando dentro de um celular (Benefício, Problema, Método).
+# Uso: python3 -I video/anuncios_celular.py [beneficio|problema|metodo]  -> video/anuncio-<nome>.mp4
+# Precisa dos quadros em fonte/celular/{bacurau,toca,bacurau2,toca2}/q_0001.jpg... (video/gravar_celular.mjs;
+# bacurau2 = 170 1800 1700 e toca2 = 170 2200 1900)
 # e da música video/musica/beneficio.mp3 (vidIQ, livre de direitos).
 import math, pathlib, random, struct, subprocess, tempfile, wave
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -97,43 +98,105 @@ def balao(texto, y, dir_, ft):
     d.text((x0 + 32, y + 20), texto, font=ft, fill=FUNDO if dir_ else TEXTO)
     return im
 
-# ---------- roteiro
+# ---------- roteiros
+ROTEIROS = {
+    "beneficio": dict(
+        a=("chat", ["PERGUNTEI PRA IA:", "*ONDE IR HOJE*", "*NO RECIFE?*"], "onde ir hoje no Recife?"),
+        b=(["ELA INDICA QUEM", "*ELA CONSEGUE ACHAR*"], "o que a IA confere", "ok",
+           ["Site com endereço", "Horário e agenda", "Avaliações no Google"]),
+        sites=[("bacurau", ["ESPAÇO CULTURAL", "*COM SITE PRÓPRIO*"], "casabacurau.com.br",
+                [("Agenda", "esq", 820), ("Endereço", "dir", 1120), ("Ingresso", "esq", 1420)]),
+               ("toca", ["BANDA PRA FESTA", "*QUE SE CONTRATA*"], "tocadocuco.duckdns.org",
+                [("Show", "dir", 820), ("Contratar", "esq", 1120), ("WhatsApp", "dir", 1420)])],
+        fim=["SEU NEGÓCIO", "APARECE QUANDO", "*PERGUNTAM?*"]),
+    "problema": dict(
+        a=("dms", ["SEU NEGÓCIO SÓ", "EXISTE NO", "*INSTAGRAM?*"],
+           ["qual o endereço?", "abre hoje?", "como compro ingresso?", "tem agenda do mês?"]),
+        b=(["O CLIENTE NÃO ACHA", "*E DESISTE*"], "perdido entre posts e stories", "x",
+           ["Endereço", "Horário", "Agenda e preços"]),
+        sites=[("bacurau2", ["NO SITE ESTÁ", "*TUDO NUM LUGAR SÓ*"], "casabacurau.com.br",
+                [("Agenda", "esq", 820), ("Datas e horários", "dir", 1120), ("Lojinha", "esq", 1420)]),
+               ("toca2", ["E QUEM QUER", "*CONTRATA DIRETO*"], "tocadocuco.duckdns.org",
+                [("Contratar", "dir", 820), ("Sobre a banda", "esq", 1120), ("WhatsApp", "dir", 1420)])],
+        fim=["SEU NEGÓCIO", "MERECE UM", "*ENDEREÇO SEU*"]),
+    "metodo": dict(
+        a=("toque", ["SEU CLIENTE", "CHAMA VOCÊ", "*COM UM TOQUE?*"], "Oi! Vi o site, quero um orçamento"),
+        b=(["O SITE FAZ", "*O CAMINHO CURTO*"], "do site pro seu WhatsApp", "ok",
+           ["Botão sempre à vista", "Mensagem já escrita", "Abre direto no celular"]),
+        sites=[("toca2", ["UM TOQUE E", "*JÁ É CONVERSA*"], "tocadocuco.duckdns.org",
+                [("Contratar um show", "dir", 820), ("Botão fixo", "esq", 1120), ("WhatsApp", "dir", 1420)]),
+               ("bacurau", ["AGENDA À MÃO,", "*CONTATO TAMBÉM*"], "casabacurau.com.br",
+                [("Ver a agenda", "esq", 820), ("Ingresso", "dir", 1120), ("WhatsApp", "dir", 1420)])],
+        fim=["MENOS CLIQUES,", "*MAIS CLIENTES*"]),
+}
+
+def xis(d, cx, cy, r=34):
+    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(70, 72, 78))
+    for s_ in (1, -1):
+        d.line((cx - 13, cy - 13 * s_, cx + 13, cy + 13 * s_), fill=TEXTO, width=7)
+
+import sys
+NOME = sys.argv[1] if len(sys.argv) > 1 else None
+if NOME is None:
+    for n in ROTEIROS:
+        subprocess.run([sys.executable, "-I", __file__, n], check=True)
+    raise SystemExit
+R = ROTEIROS[NOME]
+
 bg = fundo()
 por(bg, 0, TOTAL, 0.01)
 
-# A) gancho: pergunta pra IA
-titulo(["PERGUNTEI PRA IA:", "*ONDE IR HOJE*", "*NO RECIFE?*"], *A)
-por(cartao((90, 760, 990, 1330)), A[0] + 0.3, A[1], 0.25)
-cab = vazio(); d = ImageDraw.Draw(cab)
-d.ellipse((130, 800, 186, 856), fill=(52, 56, 62)); d.text((143, 813), "IA", font=f(NEG, 26), fill=ACENTO)
-d.text((206, 812), "Assistente de IA", font=f(NEG, 34), fill=SUAVE)
-por(cab, A[0] + 0.3, A[1], 0.25)
-ft = f(REG, 46); pergunta = "onde ir hoje no Recife?"
-for i in range(1, len(pergunta) + 1):  # digitando letra por letra
-    por(balao(pergunta[:i], 920, True, ft), 0.7 + i * 0.045, 0.7 + (i + 1) * 0.045 if i < len(pergunta) else A[1], 0.01)
-for k in range(3):
-    por(balao("Procurando lugares" + "." * (k + 1), 1100, False, ft), 1.9 + k * 0.35, 1.9 + (k + 1) * 0.35 if k < 2 else A[1], 0.05)
+# A) gancho
+tipo, tit, extra = R["a"]
+titulo(tit, *A)
+ft = f(REG, 46)
+if tipo == "chat":
+    por(cartao((90, 760, 990, 1330)), A[0] + 0.3, A[1], 0.25)
+    cab = vazio(); d = ImageDraw.Draw(cab)
+    d.ellipse((130, 800, 186, 856), fill=(52, 56, 62)); d.text((143, 813), "IA", font=f(NEG, 26), fill=ACENTO)
+    d.text((206, 812), "Assistente de IA", font=f(NEG, 34), fill=SUAVE)
+    por(cab, A[0] + 0.3, A[1], 0.25)
+    for i in range(1, len(extra) + 1):  # digitando letra por letra
+        por(balao(extra[:i], 920, True, ft), 0.7 + i * 0.045, 0.7 + (i + 1) * 0.045 if i < len(extra) else A[1], 0.01)
+    for k in range(3):
+        por(balao("Procurando lugares" + "." * (k + 1), 1100, False, ft), 1.9 + k * 0.35, 1.9 + (k + 1) * 0.35 if k < 2 else A[1], 0.05)
+elif tipo == "dms":
+    por(cartao((90, 700, 990, 1420)), A[0] + 0.3, A[1], 0.25)
+    cab = vazio(); d = ImageDraw.Draw(cab); d.text((140, 745), "mensagens · 27 não lidas", font=f(MONO, 34), fill=SUAVE)
+    por(cab, A[0] + 0.3, A[1], 0.25)
+    for i, t in enumerate(extra):
+        por(balao(t, 830 + i * 145, False, ft), 1.0 + i * 0.5, A[1], 0.12, clique=True)
+else:  # toque: botão, dedo tocando, mensagem pronta
+    por(cartao((90, 720, 990, 1380)), A[0] + 0.3, A[1], 0.25)
+    im = vazio(); d = ImageDraw.Draw(im); d.rounded_rectangle((170, 800, 910, 940), 70, fill=ACENTO)
+    t = "Chamar no WhatsApp"; ftb = f(NEG, 58); d.text(((W - MED.textlength(t, font=ftb)) / 2, 836), t, font=ftb, fill=FUNDO)
+    por(im, A[0] + 0.5, A[1], 0.2)
+    for r, t0 in [(40, 1.3), (70, 1.42), (100, 1.54)]:
+        im = vazio(); ImageDraw.Draw(im).ellipse((640 - r, 870 - r, 640 + r, 870 + r), outline=(255, 255, 255, 200), width=6)
+        por(im, t0, t0 + 0.14, 0.01)
+    cliques.append(1.3)
+    im = vazio(); ImageDraw.Draw(im).text((140, 1010), "mensagem já escrita:", font=f(MONO, 34), fill=SUAVE)
+    por(im, 1.7, A[1], 0.2)
+    ftm = f(REG, 44)
+    for i in range(1, len(extra) + 1):
+        por(balao(extra[:i], 1080, True, ftm), 1.8 + i * 0.03, 1.8 + (i + 1) * 0.03 if i < len(extra) else A[1], 0.01)
 
-# B) o que a IA confere
-titulo(["ELA INDICA QUEM", "*ELA CONSEGUE ACHAR*"], *B)
+# B) cartão com a lista
+tit, rotulo_b, marca, itens = R["b"]
+titulo(tit, *B)
 por(cartao((90, 640, 990, 1420)), B[0] + 0.2, B[1], 0.25)
-im = vazio(); ImageDraw.Draw(im).text((150, 690), "o que a IA confere", font=f(MONO, 38), fill=SUAVE)
+im = vazio(); ImageDraw.Draw(im).text((150, 690), rotulo_b, font=f(MONO, 36), fill=SUAVE)
 por(im, B[0] + 0.2, B[1], 0.25)
-for i, t in enumerate(["Site com endereço", "Horário e agenda", "Avaliações no Google"]):
+for i, t in enumerate(itens):
     im = vazio(); d = ImageDraw.Draw(im); y = 820 + i * 190
-    check(d, 190, y + 32); d.text((260, y), t, font=f(NEG, 58), fill=TEXTO)
+    (check if marca == "ok" else xis)(d, 190, y + 32)
+    d.text((260, y), t, font=f(NEG, 58), fill=TEXTO if marca == "ok" else SUAVE)
     por(im, B[0] + 0.7 + i * 0.5, B[1], 0.15, clique=True)
 
 # C, D) sites no celular
-CENAS_SITE = [
-    (C, "bacurau", ["ESPAÇO CULTURAL", "*COM SITE PRÓPRIO*"], "casabacurau.com.br",
-     [("Agenda", "esq", 820), ("Endereço", "dir", 1120), ("Ingresso", "esq", 1420)]),
-    (D, "toca", ["BANDA PRA FESTA", "*QUE SE CONTRATA*"], "tocadocuco.duckdns.org",
-     [("Show", "dir", 820), ("Contratar", "esq", 1120), ("WhatsApp", "dir", 1420)]),
-]
 moldura = celular(bg)
 videos = []
-for (ini, fim), pasta, tit, url, tags in CENAS_SITE:
+for (ini, fim), (pasta, tit, url, tags) in zip([C, D], R["sites"]):
     videos.append((CEL / pasta, ini, fim))
     camadas.append(("__video__", ini, fim, 0))
     por(moldura, ini, fim, 0.01)
@@ -143,7 +206,7 @@ for (ini, fim), pasta, tit, url, tags in CENAS_SITE:
         por(etiqueta(t, 70 if lado == "esq" else W - 70, y, lado), ini + 1.0 + j * 0.9, fim, 0.15, clique=True)
 
 # E) chamada final
-titulo(["SEU NEGÓCIO", "APARECE QUANDO", "*PERGUNTAM?*"], E[0], E[1], y=330, tam=110)
+titulo(R["fim"], E[0], E[1], y=330 if len(R["fim"]) == 3 else 420, tam=110)
 im = vazio(); d = ImageDraw.Draw(im); ft = f(MONO, 60); t = ">_ wandercodes"
 d.text(((W - MED.textlength(t, font=ft)) / 2, 840), t, font=ft, fill=ACENTO)
 por(im, E[0] + 0.9, TOTAL, 0.3)
@@ -184,7 +247,7 @@ for img, ini, fim, fade in camadas:
     if caixa: pecas.append(("i", img.crop(caixa), caixa[:2], ini, fim, fade))
 x0, y0, x1, y1 = TELA
 sfx(pasta / "sfx.wav")
-saida = RAIZ / "video" / "anuncio-beneficio.mp4"
+saida = RAIZ / "video" / f"anuncio-{NOME}.mp4"
 ff = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
      "-r", str(FPS), "-i", "-", "-i", str(RAIZ / "video" / "musica" / "beneficio.mp3"), "-i", str(pasta / "sfx.wav"),
      "-filter_complex", f"[1:a]volume=0.55,afade=t=out:st={TOTAL - 1.2:.2f}:d=1.2[mu];[2:a]aformat=channel_layouts=stereo[fx];"

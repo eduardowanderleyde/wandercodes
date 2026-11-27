@@ -1,6 +1,6 @@
 # Vídeos de anúncio 9:16 (tráfego pago) com os tours reais dos sites.
-# Uso: python3 -I anuncios.py [problema|metodo]  -> video/anuncio-{problema,metodo}.mp4
-# (o Benefício agora sai de video/beneficio_celular.py)
+# Uso: python3 -I anuncios.py   -> versão antiga (navegador); os atuais saem de video/anuncios_celular.py
+# (o Benefício agora sai de video/anuncios_celular.py)
 # Fontes do Mac; no Linux cai nas Liberation (mesmas medidas da Arial).
 # FONTE=/pasta muda a pasta dos tours (aceita também toca.mp4, bacurau.mp4, niedja.mp4).
 import os, pathlib, subprocess, sys, tempfile
