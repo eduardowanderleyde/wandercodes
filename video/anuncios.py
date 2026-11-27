@@ -1,16 +1,21 @@
 # Vídeos de anúncio 9:16 (tráfego pago) com os tours reais dos sites.
-# Uso: python3 -I anuncios.py   -> video/anuncio-{problema,beneficio,metodo}.mp4
-import pathlib, subprocess, tempfile
+# Uso: python3 -I anuncios.py [beneficio ...]  -> video/anuncio-{problema,beneficio,metodo}.mp4
+# Fontes do Mac; no Linux cai nas Liberation (mesmas medidas da Arial).
+# FONTE=/pasta muda a pasta dos tours (aceita também toca.mp4, bacurau.mp4, niedja.mp4).
+import os, pathlib, subprocess, sys, tempfile
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
-FONTE = RAIZ / "fonte"
+FONTE = pathlib.Path(os.environ.get("FONTE", RAIZ / "fonte"))
 OUT = RAIZ / "video"
 W, H = 1080, 1920
 FUNDO, TEXTO, SUAVE, ACENTO = (11, 12, 14), (243, 241, 236), (160, 162, 170), (200, 240, 49)
-NEG = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
-REG = "/System/Library/Fonts/Supplemental/Arial.ttf"
-MONO = "/System/Library/Fonts/Menlo.ttc"
+def achar(*ps):
+    return next((p for p in ps if pathlib.Path(p).exists()), ps[-1])
+LIB = "/usr/share/fonts/truetype/liberation/"
+NEG = achar("/System/Library/Fonts/Supplemental/Arial Bold.ttf", LIB + "LiberationSans-Bold.ttf")
+REG = achar("/System/Library/Fonts/Supplemental/Arial.ttf", LIB + "LiberationSans-Regular.ttf")
+MONO = achar("/System/Library/Fonts/Menlo.ttc", LIB + "LiberationMono-Regular.ttf")
 f = lambda p, s: ImageFont.truetype(p, s)
 
 TOURS = {
@@ -36,6 +41,10 @@ ANUNCIOS = {
         "clipes": [("niedja", 12), ("toca", 22), ("bacurau", 16)],
     },
 }
+def tour(chave):
+    p = TOURS[chave][0]
+    return p if p.exists() else FONTE / f"{chave}.mp4"
+
 T_GANCHO, T_CLIPE, T_LISTA, T_CTA = 3.2, 2.8, 3.4, 4.0
 
 def centro(d, y, txt, fonte, cor, esp=12):
@@ -51,11 +60,15 @@ def png(nome, img, pasta):
 def tela_gancho(linhas):
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
     d.text((80, 300), ">_ wandercodes", font=f(MONO, 40), fill=ACENTO)
-    ft = f(NEG, 118); y = 760
+    # fonte encolhe até a linha mais larga caber com 70 px de margem de cada lado
+    tam = 118
+    while tam > 60 and max(d.textlength(l.strip("*"), font=f(NEG, tam)) for l in linhas) > W - 140:
+        tam -= 2
+    ft = f(NEG, tam); passo = round(tam * 1.19); y = 760 + (140 - passo) * (len(linhas) - 1) / 2
     for l in linhas:
         cor = ACENTO if l.startswith("*") else TEXTO
         l = l.strip("*"); w = d.textlength(l, font=ft)
-        d.text(((W - w) / 2, y), l, font=ft, fill=cor); y += 140
+        d.text(((W - w) / 2, y), l, font=ft, fill=cor); y += passo
     return im
 
 def tela_clipes(corpo):
@@ -131,12 +144,12 @@ def montar(nome, a):
         ent.extend(["-loop", "1", "-t", f"{total}", "-i", caminho])
         fil.append(f"[{k}:v]format=rgba,fade=t=in:st={ini:.2f}:d={fade}:alpha=1[i{k}]")
         lab = f"[i{k}]"; k += 1; junta(lab, ini, fim)
-    src0, _, _ = TOURS[a["clipes"][0][0]]
+    src0 = tour(a["clipes"][0][0])
     imagem(fundo_gancho(src0, a["clipes"][0][1], pasta), 0, t1, 0.01)
     imagem(png("gancho", tela_gancho(a["gancho"]), pasta), 0, t1, 0.5)
     imagem(png("clipes", tela_clipes(a["corpo"]), pasta), t1, t2, 0.3)
     for i, (chave, ini) in enumerate(a["clipes"]):
-        src, texto, url = TOURS[chave]; ti = t1 + i * T_CLIPE
+        _, texto, url = TOURS[chave]; src = tour(chave); ti = t1 + i * T_CLIPE
         ent.extend(["-ss", str(ini), "-t", f"{T_CLIPE}", "-i", str(src)])
         fil.append(f"[{k}:v]scale=1000:562,setpts=PTS-STARTPTS+{ti:.2f}/TB[c{k}]")
         lab = f"[c{k}]"; k += 1; junta(lab, ti, ti + T_CLIPE, "40:760")
@@ -152,4 +165,5 @@ def montar(nome, a):
     print(saida.name, f"{total:.1f}s")
 
 for nome, a in ANUNCIOS.items():
-    montar(nome, a)
+    if len(sys.argv) < 2 or nome in sys.argv[1:]:
+        montar(nome, a)
