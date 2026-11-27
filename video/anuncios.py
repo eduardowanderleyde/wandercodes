@@ -95,8 +95,11 @@ def tela_lista():
 def tela_cta():
     im = Image.new("RGBA", (W, H), FUNDO + (255,)); d = ImageDraw.Draw(im)
     centro(d, 420, ">_ wandercodes", f(MONO, 64), ACENTO)
-    y = centro(d, 620, "Sites para pequenos\nnegócios e autônomos", f(NEG, 78), TEXTO, 14)
-    centro(d, y + 30, "no Recife", f(REG, 52), SUAVE)
+    ft = f(NEG, 84)
+    centro(d, 620, "Sites que dão vontade", ft, TEXTO)
+    l1, l2 = "de ", "entrar."; w1 = d.textlength(l1, font=ft); w = w1 + d.textlength(l2, font=ft)
+    d.text(((W - w) / 2, 716), l1, font=ft, fill=TEXTO); d.text(((W - w) / 2 + w1, 716), l2, font=ft, fill=ACENTO)
+    centro(d, 860, "Recife", f(REG, 52), SUAVE)
     d.rounded_rectangle((110, 1060, W - 110, 1220), 80, fill=ACENTO)
     centro(d, 1100, "Chame no WhatsApp", f(NEG, 66), FUNDO)
     centro(d, 1290, "(81) 99490-8227", f(NEG, 70), TEXTO)

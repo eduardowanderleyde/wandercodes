@@ -4,7 +4,9 @@ Anexar: `video/wandercodes-tour-16x9.mp4` (ou o 9x16 se for postar pelo celular)
 
 ---
 
-Pequeno negócio e autônomo também precisam de site. 🌐
+Sites que dão vontade de entrar. 🌐
+
+Pequeno negócio e autônomo também precisam de um.
 
 Muita gente acha que o Instagram resolve. Mas quando alguém procura você no Google, ou recebe seu nome por indicação, o que encontra? Um perfil com o contato perdido entre posts e stories.
 
