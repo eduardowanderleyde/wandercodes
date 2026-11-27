@@ -32,8 +32,10 @@ ANUNCIOS = {
     },
     "beneficio": {
         "gancho": ["Quem procura", "seu negócio acha", "*tudo num lugar só?*"],
-        "corpo": "Agenda, ingresso, consulta:\ntudo num endereço seu.",
-        "clipes": [("bacurau", 9), ("niedja", 6), ("toca", 12)],
+        "estilo": "perto",  # site em tela cheia, de perto, e frases entrando palavra por palavra
+        "frases": [["Agenda, ingresso,", "*fotos do rolê*"], ["Show, contato,", "*WhatsApp*"]],
+        "musica": "musica/beneficio.mp3",
+        "clipes": [("bacurau", 9), ("toca", 12)],
     },
     "metodo": {
         "gancho": ["Seu cliente", "chama você", "*com um toque?*"],
@@ -164,6 +166,120 @@ def montar(nome, a):
     subprocess.run(cmd, check=True)
     print(saida.name, f"{total:.1f}s")
 
+# ---------- estilo "perto": o site ocupa a tela toda e as frases entram palavra por palavra
+PASSO_PALAVRA = 0.16
+
+def palavras(linhas, y0, tam, passo, fonte=None, centro_x=True, x0=0):
+    """Uma imagem por palavra, já na posição final; devolve [(img, ordem)]."""
+    fonte = fonte or NEG; ft = f(fonte, tam); out = []; y = y0; n = 0
+    medir = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    for l in linhas:
+        cor = ACENTO if l.startswith("*") else TEXTO; l = l.strip("*")
+        x = (W - medir.textlength(l, font=ft)) / 2 if centro_x else x0
+        for pal in l.split(" "):
+            im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+            d.text((x + 4, y + 5), pal, font=ft, fill=(0, 0, 0, 150))  # sombra leve
+            d.text((x, y), pal, font=ft, fill=cor)
+            out.append((im, n)); n += 1; x += medir.textlength(pal + " ", font=ft)
+        y += passo
+    return out
+
+def caber(linhas, tam, margem=140):
+    medir = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    while tam > 50 and max(medir.textlength(l.strip("*"), font=f(NEG, tam)) for l in linhas) > W - margem:
+        tam -= 2
+    return tam
+
+def moldura_perto():
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    for y in range(0, 360):  # escurece o topo
+        d.line((0, y, W, y), fill=FUNDO + (int(200 * (1 - y / 360)),))
+    for y in range(1100, H):  # e o pé, onde entram as frases
+        a = min(235, int(235 * (y - 1100) / 420)); d.line((0, y, W, y), fill=FUNDO + (a,))
+    d.text((70, 150), ">_ wandercodes", font=f(MONO, 40), fill=ACENTO)
+    return im
+
+def selo(texto, url):
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    ft = f(NEG, 46); w = d.textlength(texto, font=ft)
+    d.rounded_rectangle((70, 230, 70 + w + 56, 312), 41, fill=ACENTO)
+    d.text((98, 246), texto, font=ft, fill=FUNDO)
+    ft = f(MONO, 30); d.text((72, 1830), url, font=ft, fill=SUAVE)
+    return im
+
+def montar_perto(nome, a):
+    pasta = pathlib.Path(tempfile.mkdtemp())
+    n = len(a["clipes"]); tc = 3 * T_CLIPE / n
+    total = T_GANCHO + 3 * T_CLIPE + T_LISTA + T_CTA
+    t1 = T_GANCHO; t2 = t1 + 3 * T_CLIPE; t3 = t2 + T_LISTA
+    ent = ["-f", "lavfi", "-i", f"color=c=0x0b0c0e:s={W}x{H}:r=30:d={total}"]
+    fil, ultimo, k, cont = [], "[0:v]", 1, [0]
+    def junta(lab, ini, fim):
+        nonlocal ultimo
+        saida = f"[v{len(fil)}]"
+        fil.append(f"{ultimo}{lab}overlay=0:0:enable='between(t,{ini:.2f},{fim:.2f})'{saida}"); ultimo = saida
+    def imagem(img, ini, fim, fade=0.25):
+        nonlocal k
+        cont[0] += 1; caminho = png(f"p{cont[0]}", img, pasta) if not isinstance(img, str) else img
+        ent.extend(["-loop", "1", "-t", f"{total}", "-i", caminho])
+        fil.append(f"[{k}:v]format=rgba,fade=t=in:st={ini:.2f}:d={fade}:alpha=1[i{k}]")
+        lab = f"[i{k}]"; k += 1; junta(lab, ini, fim)
+    def frase(pecas, ini, fim):
+        for img, i in pecas:
+            imagem(img, ini + i * PASSO_PALAVRA, fim, 0.22)
+
+    # 1) gancho: fundo borrado do primeiro site + palavras entrando
+    imagem(fundo_gancho(tour(a["clipes"][0][0]), a["clipes"][0][1], pasta), 0, t1, 0.01)
+    cab = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(cab).text((80, 300), ">_ wandercodes", font=f(MONO, 40), fill=ACENTO)
+    imagem(cab, 0, t1, 0.3)
+    tam = caber(a["gancho"], 118); passo = round(tam * 1.19)
+    frase(palavras(a["gancho"], 760 + (140 - passo) * (len(a["gancho"]) - 1) / 2, tam, passo), 0.25, t1)
+
+    # 2) sites de perto: recorte vertical do tour, passeando devagar da esquerda pra direita
+    for i, (chave, ini) in enumerate(a["clipes"]):
+        _, texto, url = TOURS[chave]; ti = t1 + i * tc
+        ent.extend(["-ss", str(ini), "-t", f"{tc}", "-i", str(tour(chave))])
+        fil.append(f"[{k}:v]crop=w=ih*9/16:h=ih:x='(iw-ow)*(0.25+0.5*t/{tc:.2f})':y=0,"
+                   f"scale={W}:{H}:flags=lanczos,setpts=PTS-STARTPTS+{ti:.2f}/TB[c{k}]")
+        lab = f"[c{k}]"; k += 1; junta(lab, ti, ti + tc)
+        imagem(moldura_perto(), ti, ti + tc, 0.01)
+        imagem(selo(texto, url), ti + 0.15, ti + tc, 0.25)
+        fr = a["frases"][i]; tam = caber(fr, 96)
+        frase(palavras(fr, 1440, tam, round(tam * 1.2)), ti + 0.45, ti + tc)
+
+    # 3) lista: título e itens entrando um a um
+    imagem(Image.new("RGBA", (W, H), FUNDO + (255,)), t2, t3, 0.2)
+    frase(palavras(["Um site simples", "resolve o básico"], 470, 92, 108), t2 + 0.1, t3)
+    itens = ["onde você está e\nquando atende", "WhatsApp com\nmensagem pronta", "seu trabalho num\nendereço seu"]
+    for j, t in enumerate(itens):
+        im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im); y = 860 + j * 250
+        d.ellipse((140, y + 18, 176, y + 54), fill=ACENTO)
+        for l in t.split("\n"):
+            d.text((220, y), l, font=f(NEG, 64), fill=TEXTO); y += 78
+        imagem(im, t2 + 1.0 + j * 0.55, t3, 0.3)
+
+    # 4) chamada final, entrando em partes
+    imagem(Image.new("RGBA", (W, H), FUNDO + (255,)), t3, total, 0.2)
+    cta = tela_cta()
+    for j, (y0, y1) in enumerate([(400, 600), (600, 920), (1040, 1380), (1420, 1520)]):
+        parte = Image.new("RGBA", (W, H), (0, 0, 0, 0)); parte.paste(cta.crop((0, y0, W, y1)), (0, y0))
+        imagem(parte, t3 + 0.1 + j * 0.35, total, 0.3)
+
+    musica = RAIZ / "video" / a["musica"] if a.get("musica") else None
+    if musica and musica.exists():
+        ent.extend(["-i", str(musica)])
+        audio = f"[{k}:a]volume=0.8,afade=t=in:d=0.3,afade=t=out:st={total - 1.2:.2f}:d=1.2,apad[a]"
+    else:
+        ent.extend(["-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo"]); audio = f"[{k}:a]anull[a]"
+    saida = OUT / f"anuncio-{nome}.mp4"
+    cmd = ["ffmpeg", "-loglevel", "error", "-y", *ent,
+           "-filter_complex", ";".join(fil) + f";{ultimo}format=yuv420p[out];{audio}",
+           "-map", "[out]", "-map", "[a]", "-t", f"{total}", "-r", "30",
+           "-c:v", "libx264", "-preset", "slow", "-crf", "20", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(saida)]
+    subprocess.run(cmd, check=True)
+    print(saida.name, f"{total:.1f}s", "com música" if musica and musica.exists() else "sem música")
+
 for nome, a in ANUNCIOS.items():
     if len(sys.argv) < 2 or nome in sys.argv[1:]:
-        montar(nome, a)
+        (montar_perto if a.get("estilo") == "perto" else montar)(nome, a)
